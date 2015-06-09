@@ -13,6 +13,7 @@ var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
 var User = require('./app/models/user');
+var SessionKey = require('./app/models/session');
 
 var app = express();
 
@@ -33,8 +34,8 @@ app.use(express.static(__dirname + '/public'));
 
 // TODO function to restrict access based on sessions
 function restrict (req, res, next) {
-  console.log('=====================>>> session info:', req.url);
-  console.log(req.session);
+  // console.log('=====================>>> session info:', req.url);
+  // console.log(req.session);
 
   if (req.session.user) {
     next();
@@ -113,36 +114,56 @@ function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
 
-  //salt & hash
-  var shasum = crypto.createHash('sha1');
-  var salt = util.makeSalt();
-  shasum.update(password);
-  shasum.update(salt);
-  var passwordHash = shasum.digest('hex');
+  //Check if username is taken
+  Users.reset()
+  .query('where', 'username', '=', username)
+  .fetch()
+  .then(function(collection) {
+    // console.log("==========>>", collection);
+    if (collection.length !== 0) {
+      console.log("username is taken");
+      res.redirect("/signup");
+      return;
+    } else {
 
-  //insert username and password hash & salt
-  var user = new User({
-    username: username,
-    password: passwordHash,
-    salt: salt
-  });
+      //salt & hash
+      var shasum = crypto.createHash('sha1');
+      var salt = util.randString(5);
+      shasum.update(password);
+      shasum.update(salt);
+      var passwordHash = shasum.digest('hex');
 
-  user.save().then(function(newUser) {
-    Users.add(newUser);
-    // console.log('====================>>> New user added:');
-
-    req.session.regenerate(function(err) {
-      // will have a new session here
-      req.session.user = username;
-
-      // console.log('======================>>> req.session:')
-      console.log(req.session);
-
-      // res.send(200, newUser);
-      res.redirect('/');
-    });
+      //insert username and password hash & salt
+      var user = new User({
+        username: username,
+        password: passwordHash,
+        salt: salt
+      });
 
 
+      user.save().then(function(newUser) {
+        //console.log('====================>>> New user added:', newUser);
+
+        req.session.regenerate(function(err) {
+          // will have a new session here
+          var keyStr = util.randString(10);
+          //req.session.key = keyStr;
+          var sessionKey = new SessionKey({
+            key: keyStr,
+            user_id: newUser.id
+          });
+
+          sessionKey.save().then(function(newSession) {
+            // console.log('======================>>> newsession:', newSession);
+            // console.log(req.session);
+
+
+            res.redirect('/');
+
+          })
+        });
+      });
+    }
   });
 });
 

@@ -2,6 +2,7 @@ var db = require('../config');
 var bcrypt = require('bcrypt-nodejs');
 var Promise = require('bluebird');
 var Link = require('./link');
+var Session = require('./session');
 
 var User = db.Model.extend({
   tableName: 'users',
@@ -10,7 +11,9 @@ var User = db.Model.extend({
   links: function() {
     return this.hasMany(Link);
   },
-
+  sessions: function() {
+    return this.hasMany(Session);
+  },
   initialize: function(){
 
     // TODO: created event listener for signup and login
