@@ -14,6 +14,7 @@ var Link = require('./app/models/link');
 var Click = require('./app/models/click');
 var User = require('./app/models/user');
 var SessionKey = require('./app/models/session');
+var SessionKeys = require("./app/collections/sessions");
 
 var app = express();
 
@@ -36,9 +37,18 @@ app.use(express.static(__dirname + '/public'));
 function restrict (req, res, next) {
   // console.log('=====================>>> session info:', req.url);
   // console.log(req.session);
+  if (req.session.key) {
 
-  if (req.session.user) {
-    next();
+    SessionKeys.reset()
+      .query('where', 'key', '=', req.session.key)
+      .fetch()
+      .then(function(userKey) {
+        if (userKey.length === 0) {
+          res.redirect("/login");
+        } else {
+          next();
+        }
+      });
   } else {
     //req.session.error = "Access denied.  Please log in.";
     res.redirect('/login');
@@ -57,9 +67,20 @@ function(req, res) {
 
 app.get('/links', restrict,
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  });
+  SessionKeys.reset()
+    .query('where', 'key', '=', req.session.key)
+    .fetch()
+    .then(function(userKey) {
+      var userId = userKey.models[0].attributes.user_id;
+      console.log("**********************: userId>>>", userId);
+
+      Links.reset()
+        .query('where', 'user_id', '=', userId)
+        .fetch()
+        .then(function(links) {
+          res.send(200, links.models);
+        });
+    });
 });
 
 app.post('/links',
@@ -81,16 +102,25 @@ function(req, res) {
           return res.send(404);
         }
 
-        var link = new Link({
-          url: uri,
-          title: title,
-          base_url: req.headers.origin
-        });
+        //look up user_id first
+        SessionKeys.reset()
+          .query('where', 'key', '=', req.session.key)
+          .fetch()
+          .then(function(userKey) {
+            var userId = userKey.models[0].attributes.user_id;
 
-        link.save().then(function(newLink) {
-          Links.add(newLink);
-          res.send(200, newLink);
-        });
+            var link = new Link({
+              url: uri,
+              title: title,
+              base_url: req.headers.origin,
+              user_id: userId
+            });
+
+            link.save().then(function(newLink) {
+              Links.add(newLink);
+              res.send(200, newLink);
+            });
+          });
       });
     }
   });
@@ -147,7 +177,7 @@ function(req, res) {
         req.session.regenerate(function(err) {
           // will have a new session here
           var keyStr = util.randString(10);
-          //req.session.key = keyStr;
+          req.session.key = keyStr;
           var sessionKey = new SessionKey({
             key: keyStr,
             user_id: newUser.id
