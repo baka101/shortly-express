@@ -25,7 +25,7 @@ describe('', function() {
 
     // delete link for roflzoo from db so it can be created later for the test
     db.knex('urls')
-      .where('url', '=', 'http://www.roflzoo.com/')
+      .where('url', '=', 'https://www.google.com/')
       .del()
       .catch(function(error) {
         throw {
@@ -107,13 +107,13 @@ describe('', function() {
         'followAllRedirects': true,
         'uri': 'http://127.0.0.1:4568/links',
         'json': {
-          'url': 'http://www.roflzoo.com/'
+          'url': 'https://www.google.com/'
         }
       };
 
       it('Responds with the short code', function(done) {
         requestWithSession(options, function(error, res, body) {
-          expect(res.body.url).to.equal('http://www.roflzoo.com/');
+          expect(res.body.url).to.equal('https://www.google.com/');
           expect(res.body.code).to.not.be.null;
           done();
         });
@@ -122,12 +122,12 @@ describe('', function() {
       it('New links create a database entry', function(done) {
         requestWithSession(options, function(error, res, body) {
           db.knex('urls')
-            .where('url', '=', 'http://www.roflzoo.com/')
+            .where('url', '=', 'https://www.google.com/')
             .then(function(urls) {
               if (urls['0'] && urls['0']['url']) {
                 var foundUrl = urls['0']['url'];
               }
-              expect(foundUrl).to.equal('http://www.roflzoo.com/');
+              expect(foundUrl).to.equal('https://www.google.com/');
               done();
             });
         });
@@ -136,12 +136,12 @@ describe('', function() {
       it('Fetches the link url title', function (done) {
         requestWithSession(options, function(error, res, body) {
           db.knex('urls')
-            .where('title', '=', 'Rofl Zoo - Daily funny animal pictures')
+            .where('title', '=', 'Google')
             .then(function(urls) {
               if (urls['0'] && urls['0']['title']) {
                 var foundTitle = urls['0']['title'];
               }
-              expect(foundTitle).to.equal('Rofl Zoo - Daily funny animal pictures');
+              expect(foundTitle).to.equal('Google');
               done();
             });
         });
@@ -156,8 +156,8 @@ describe('', function() {
       beforeEach(function(done){
         // save a link to the database
         link = new Link({
-          url: 'http://www.roflzoo.com/',
-          title: 'Rofl Zoo - Daily funny animal pictures',
+          url: 'https://www.google.com/',
+          title: 'Google',
           base_url: 'http://127.0.0.1:4568'
         });
         link.save().then(function(){
@@ -171,7 +171,7 @@ describe('', function() {
           'followAllRedirects': true,
           'uri': 'http://127.0.0.1:4568/links',
           'json': {
-            'url': 'http://www.roflzoo.com/'
+            'url': 'https://www.google.com/'
           }
         };
 
@@ -190,7 +190,7 @@ describe('', function() {
 
         requestWithSession(options, function(error, res, body) {
           var currentLocation = res.request.href;
-          expect(currentLocation).to.equal('http://www.roflzoo.com/');
+          expect(currentLocation).to.equal('https://www.google.com/');
           done();
         });
       });
@@ -202,7 +202,7 @@ describe('', function() {
         };
 
         requestWithSession(options, function(error, res, body) {
-          expect(body).to.include('"title":"Rofl Zoo - Daily funny animal pictures"');
+          expect(body).to.include('"title":"Google"');
           expect(body).to.include('"code":"' + link.get('code') + '"');
           done();
         });

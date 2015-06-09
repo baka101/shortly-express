@@ -1,7 +1,9 @@
 var express = require('express');
+var session = require('express-session');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var crypto = require('crypto');
 
 
 var db = require('./app/config');
@@ -10,12 +12,18 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var User = require('./app/models/user');
 
 var app = express();
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(partials());
+app.use(session({
+    secret: 'TODOsomestringhere',
+    resave: true,
+    saveUninitialized: true
+}));
 // Parse JSON (uniform resource locators)
 app.use(bodyParser.json());
 // Parse forms (signup/login)
@@ -23,24 +31,37 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
+// TODO function to restrict access based on sessions
+function restrict (req, res, next) {
+  console.log('=====================>>> session info:', req.url);
+  console.log(req.session);
+
+  if (req.session.user) {
+    next();
+  } else {
+    //req.session.error = "Access denied.  Please log in.";
+    res.redirect('/login');
+  }
+}
+
+app.get('/', restrict,
 function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
+app.get('/create', restrict,
 function(req, res) {
   res.render('index');
 });
 
-app.get('/links', 
+app.get('/links', restrict,
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
 
-app.post('/links', 
+app.post('/links',
 function(req, res) {
   var uri = req.body.url;
 
@@ -77,7 +98,53 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.get('/signup',
+function(req, res) {
+  res.render('signup');
+});
 
+app.get('/login',
+function(req, res) {
+  res.render('login');
+});
+
+app.post('/signup',
+function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  //salt & hash
+  var shasum = crypto.createHash('sha1');
+  var salt = util.makeSalt();
+  shasum.update(password);
+  shasum.update(salt);
+  var passwordHash = shasum.digest('hex');
+
+  //insert username and password hash & salt
+  var user = new User({
+    username: username,
+    password: passwordHash,
+    salt: salt
+  });
+
+  user.save().then(function(newUser) {
+    Users.add(newUser);
+    // console.log('====================>>> New user added:');
+
+    req.session.regenerate(function(err) {
+      // will have a new session here
+      req.session.user = username;
+
+      // console.log('======================>>> req.session:')
+      console.log(req.session);
+
+      // res.send(200, newUser);
+      res.redirect('/');
+    });
+
+
+  });
+});
 
 
 /************************************************************/
