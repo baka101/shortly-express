@@ -12,8 +12,8 @@ var Link = db.Model.extend({
   clicks: function() {
     return this.hasMany(Click);
   },
-  user: function() {
-    return this.belongsTo(User, 'user_id');
+  users: function() {
+    return this.belongsToMany(User);
   },
   initialize: function(){
     this.on('creating', function(model, attrs, options){

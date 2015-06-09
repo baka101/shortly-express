@@ -9,7 +9,7 @@ var User = db.Model.extend({
   hasTimestamps: true,
 
   links: function() {
-    return this.hasMany(Link);
+    return this.belongsToMany(Link);
   },
   sessions: function() {
     return this.hasMany(Session);

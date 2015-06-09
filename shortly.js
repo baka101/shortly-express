@@ -74,12 +74,22 @@ function(req, res) {
       var userId = userKey.models[0].attributes.user_id;
       console.log("**********************: userId>>>", userId);
 
+      // Users.reset()
+      //   .query('where', 'user_id', '=', userId)
+      //   .fetch({
+      //     withRelated: ['urls']
+      //   })
+      //   .then(function(collection) {
+      //     console.log(collection);
+      //     res.send(200, null);
+      //   });
+
       Links.reset()
-        .query('where', 'user_id', '=', userId)
         .fetch()
-        .then(function(links) {
-          res.send(200, links.models);
+        .then(function(collection) {
+          res.send(200, collection.models);
         });
+
     });
 });
 
@@ -113,11 +123,12 @@ function(req, res) {
               url: uri,
               title: title,
               base_url: req.headers.origin,
-              user_id: userId
+              // user_id: userId
             });
 
             link.save().then(function(newLink) {
-              Links.add(newLink);
+              // newLink.users().attach([userId]);
+
               res.send(200, newLink);
             });
           });
@@ -175,7 +186,7 @@ function(req, res) {
         //console.log('====================>>> New user added:', newUser);
 
         req.session.regenerate(function(err) {
-          // will have a new session here
+          // generate a new session here
           var keyStr = util.randString(10);
           req.session.key = keyStr;
           var sessionKey = new SessionKey({
@@ -183,20 +194,70 @@ function(req, res) {
             user_id: newUser.id
           });
 
+          //saves session key in sessions table in database
           sessionKey.save().then(function(newSession) {
             // console.log('======================>>> newsession:', newSession);
             // console.log(req.session);
-
-
             res.redirect('/');
-
-          })
+          });
         });
       });
     }
   });
 });
 
+app.post('/login',
+function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  Users.reset()
+  .query('where', 'username', '=', username)
+  .fetch()
+  .then(function(collection) {
+
+    if (collection.length === 0) {
+      console.log("username does not exist");
+      res.redirect("/signup");
+      return;
+    } else {
+      var userCredentials = collection.at(0).attributes;
+      console.log('======================>>> userCredentials:', userCredentials);
+
+      //salt & hash
+      var shasum = crypto.createHash('sha1');
+      var salt = userCredentials.salt;
+      shasum.update(password);
+      shasum.update(salt);
+      var passwordHash = shasum.digest('hex');
+      console.log('======================>>> passwordHash:', passwordHash);
+
+      //verifying if password is correct
+      if (passwordHash === userCredentials.password) {
+        req.session.regenerate(function(err) {
+          // generate a new session here
+          var keyStr = util.randString(10);
+          req.session.key = keyStr;
+          var sessionKey = new SessionKey({
+            key: keyStr,
+            user_id: userCredentials.id
+          });
+
+          //saves session key in sessions table in database
+          sessionKey.save().then(function(newSession) {
+            // console.log('======================>>> newsession:', newSession);
+            // console.log(req.session);
+            res.redirect('/');
+          });
+        });
+      } else {
+        console.log("passwordHash did not match");
+        res.redirect("/signup");
+      }
+    }
+  });
+
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
