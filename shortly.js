@@ -150,6 +150,12 @@ function(req, res) {
   res.render('login');
 });
 
+app.get('/logout', function(req, res){
+  req.session.destroy(function(){
+      res.redirect('/login');
+  });
+});
+
 app.post('/signup',
 function(req, res) {
   var username = req.body.username;
