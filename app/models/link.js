@@ -1,6 +1,6 @@
 var db = require('../config');
 var Click = require('./click');
-var User = require('./user');
+// var User = require('./user');
 var crypto = require('crypto');
 
 var Link = db.Model.extend({
@@ -13,7 +13,7 @@ var Link = db.Model.extend({
     return this.hasMany(Click);
   },
   users: function() {
-    return this.belongsToMany(User);
+    return this.belongsToMany(require('./user'));
   },
   initialize: function(){
     this.on('creating', function(model, attrs, options){

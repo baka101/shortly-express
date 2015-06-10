@@ -74,21 +74,21 @@ function(req, res) {
       var userId = userKey.models[0].attributes.user_id;
       console.log("**********************: userId>>>", userId);
 
-      // Users.reset()
-      //   .query('where', 'user_id', '=', userId)
-      //   .fetch({
-      //     withRelated: ['urls']
-      //   })
-      //   .then(function(collection) {
-      //     console.log(collection);
-      //     res.send(200, null);
-      //   });
-
-      Links.reset()
-        .fetch()
+      Users.reset()
+        .query('where', 'id', '=', userId)
+        .fetch({
+          withRelated: ['links']
+        })
         .then(function(collection) {
-          res.send(200, collection.models);
+          // console.log(collection.at(0).relations.links.models);
+          res.send(200, collection.at(0).relations.links.models);
         });
+
+      // Links.reset()
+      //   .fetch()
+      //   .then(function(collection) {
+      //     res.send(200, collection.models);
+      //   });
 
     });
 });
@@ -127,7 +127,7 @@ function(req, res) {
             });
 
             link.save().then(function(newLink) {
-              // newLink.users().attach([userId]);
+              newLink.users().attach([userId]);
 
               res.send(200, newLink);
             });

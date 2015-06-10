@@ -84,7 +84,7 @@ db.knex.schema.hasTable('urls_users').then(function(exists) {
   if (!exists) {
     db.knex.schema.createTable('urls_users', function (session) {
       session.increments('id').primary();
-      session.integer('urls_id', 255);
+      session.integer('url_id', 255);
       session.integer('user_id', 255);
       session.timestamps();
     }).then(function (table) {
